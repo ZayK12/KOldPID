@@ -34,7 +34,7 @@ motor BackLeft = motor(PORT10, ratio18_1, false);
 
 motor FrontRight = motor(PORT11, ratio18_1, true);
 
-motor BackRight = motor(PORT7, ratio18_1, false);
+motor BackRight = motor(PORT2, ratio18_1, false);
 
 inertial Inertial4 = inertial(PORT4);
 
@@ -66,13 +66,11 @@ bool RemoteControlCodeEnabled = true;
 
 // Include the V5 Library
 #include "vex.h"
+int input = 1000;
 
 
-
-
-//auton settings
-int TV = 1200;
-bool swtch = false; // switch to toggle while loop
+int TV = input/(3.14159 * 104.775) * 360;
+bool swtch = true; // switch to toggle while loop
 bool swtch2 = true; // debug switch
 
 
@@ -81,10 +79,17 @@ bool swtch2 = true; // debug switch
 using namespace vex;
 competition Competition;
 
-double Kp = 0.9; // Constant for Proportion
+double Kp = 0.875; // Constant for Proportion
 double Ki = 0.0001; // Constant for Integral
 double Kd = 0.00003;// Constant for Derivative
-float error = 0; //error is the distance left from the current position to the TV
+float leftError = 0; //error is the distance left from the current position to the TV
+float leftIntegral = 0;
+float leftDerivative = 0;
+float leftPrev_error = 0;
+float rightError = 0;
+float rightIntegral = 0;
+float rightDerivative = 0;
+float rightPrev_error = 0;
 float prev_error = 0; // This is just the previous error before the next loop
 float integral = 0; // 
 float derivative = 0; // error - prev_error : 
@@ -107,23 +112,50 @@ float speed = 0; // speed
 void onevent_getVar_0()
 {
   int FLMP = FrontLeft.position(degrees);
-  int FRMP = FrontRight.position(degrees);
-  int AVGMP = (FLMP + FRMP) / 2;
-  error = TV - AVGMP;
-  integral += error;
-  prev_error = error;
+  leftError = TV - FLMP;
+  if (leftError == 0)
+  {
+    leftIntegral = 0;
+  }
+  leftIntegral += leftError;
+  leftPrev_error = leftError;
 }
 
 
+void onevent_getVar_1()
+{
+  int FRMP = FrontRight.position(degrees);
+  rightError = TV - FRMP;
+  
+  rightIntegral += rightError;
+  rightPrev_error = rightError;
 
+}
 void whenstarted1() 
 {
   while (swtch) 
   {
-    float lateralMotorPower = ((Kp*error + Ki*integral + Kd * derivative)/12);
-    FrontLeft.spin(forward, lateralMotorPower, voltageUnits::volt);
-    FrontRight.spin(forward, lateralMotorPower, voltageUnits::volt);
+    float rightlateralMotorPower = ((Kp*rightError + Ki*rightIntegral + Kd * (rightError - rightPrev_error))/12);
+    float leftlateralMotorPower = ((Kp*leftError + Ki*leftIntegral + Kd * (leftError - leftPrev_error))/12);
+    
+    if (rightlateralMotorPower > float(10))
+    
+    {
+      rightlateralMotorPower = 10;
+      //return 0;
+    }
+
+
+    if (leftlateralMotorPower > float(10))
+    {
+      leftlateralMotorPower = 10;
+      //return 0;
+    }
+    
+    leftside.spin(forward, leftlateralMotorPower, voltageUnits::volt);
+    rightside.spin(forward, rightlateralMotorPower, voltageUnits::volt);
     //speed = Kp*error + Ki*integral + Kd * derivative;
+    //return 0;
   }
 
 }
@@ -135,14 +167,16 @@ int whenStarted2()
     getVar.broadcast();
     Controller1.Screen.clearScreen();
     Controller1.Screen.setCursor(1,1);
-    Controller1.Screen.print(error);
+    Controller1.Screen.print(rightError);
   }
   return 0;
+  
 }
 
 
 int main() {
   getVar(onevent_getVar_0);
+  getVar(onevent_getVar_1);
   vex::competition::bStopTasksBetweenModes = false;
   Competition.drivercontrol(VEXcode_driver_task);
   swtch = true;
