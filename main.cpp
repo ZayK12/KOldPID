@@ -32,17 +32,25 @@ motor FrontLeft = motor(PORT20, ratio18_1, false);
 
 motor BackLeft = motor(PORT10, ratio18_1, false);
 
-motor_group leftside = motor_group(FrontLeft, BackLeft);
-
 motor FrontRight = motor(PORT11, ratio18_1, true);
 
-motor BackRight = motor(PORT2, ratio18_1, false);
-
-motor_group rightside = motor_group(FrontRight, BackLeft);
+motor BackRight = motor(PORT2, ratio18_1, true);
 
 inertial Inertial4 = inertial(PORT4);
 
 
+
+
+
+
+
+
+
+
+
+
+motor_group leftside = motor_group(FrontLeft, BackLeft);
+motor_group rightside = motor_group(FrontRight, BackRight);
 
 
 // Helper to make playing sounds from the V5 in VEXcode easier and
@@ -70,7 +78,7 @@ bool RemoteControlCodeEnabled = true;
 
 // Include the V5 Library
 #include "vex.h"
-int input = 100000;
+int input = 1000;
 
 
 int TV = input/(3.14159 * 104.775) * 360;
@@ -83,7 +91,7 @@ bool swtch2 = true; // debug switch
 using namespace vex;
 competition Competition;
 
-double Kp = 0.9; // Constant for Proportion
+double Kp = 0.875; // Constant for Proportion
 double Ki = 0.0001; // Constant for Integral
 double Kd = 0.00003;// Constant for Derivative
 float leftError = 0; //error is the distance left from the current position to the TV
@@ -140,10 +148,26 @@ void whenstarted1()
   while (swtch) 
   {
     float rightlateralMotorPower = ((Kp*rightError + Ki*rightIntegral + Kd * (rightError - rightPrev_error))/12);
-    float leftlateralMotorPower = ((Kp*leftError + Ki*leftIntegral + Kd * (leftError - leftPrev_error))/24);
+    float leftlateralMotorPower = ((Kp*leftError + Ki*leftIntegral + Kd * (leftError - leftPrev_error))/12);
+    
+    if (rightlateralMotorPower > float(10))
+    
+    {
+      rightlateralMotorPower = 10;
+      //return 0;
+    }
+
+
+    if (leftlateralMotorPower > float(10))
+    {
+      leftlateralMotorPower = 10;
+      //return 0;
+    }
+    
     leftside.spin(forward, leftlateralMotorPower, voltageUnits::volt);
     rightside.spin(forward, rightlateralMotorPower, voltageUnits::volt);
     //speed = Kp*error + Ki*integral + Kd * derivative;
+    //return 0;
   }
 
 }
@@ -158,6 +182,7 @@ int whenStarted2()
     Controller1.Screen.print(rightError);
   }
   return 0;
+  
 }
 
 
